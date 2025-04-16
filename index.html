@@ -5,40 +5,62 @@
   <title>Zeyu 的打卡小站 V2</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
+    /* 基础样式 */
     body {
-      font-family: sans-serif;
-      background-color: #f4f4f4;
-      color: #333;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #f4f4f4, #e0e0e0);
       margin: 30px;
-      transition: all 0.3s;
+      color: #333;
+      transition: background-color 0.3s, color 0.3s;
     }
     .dark-mode {
-      background-color: #222;
+      background: #222;
       color: #ddd;
+    }
+    nav {
+      margin-bottom: 20px;
+    }
+    nav a {
+      text-decoration: none;
+      padding: 10px 15px;
+      margin-right: 10px;
+      background: #42a5f5;
+      color: white;
+      border-radius: 4px;
+      transition: background 0.3s;
+    }
+    nav a:hover {
+      background: #1e88e5;
+    }
+    h1 {
+      margin-bottom: 10px;
     }
     .task {
       background: white;
-      color: black;
       padding: 12px;
       margin-bottom: 10px;
       border-radius: 8px;
       display: flex;
       justify-content: space-between;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      transition: background 0.3s, transform 0.2s;
+    }
+    .task:hover {
+      transform: scale(1.02);
     }
     .dark-mode .task {
       background: #444;
-      color: #ddd;
     }
     .done {
       text-decoration: line-through;
       color: gray;
     }
     button {
-      padding: 6px 10px;
+      padding: 6px 12px;
       border: none;
       border-radius: 4px;
       cursor: pointer;
+      outline: none;
     }
     .tick-btn {
       background: #4caf50;
@@ -49,21 +71,25 @@
       color: white;
       margin-top: 10px;
     }
-    canvas {
-      margin-top: 20px;
-      max-width: 100%;
+    #completionRate {
+      font-weight: bold;
+      margin-top: 10px;
     }
   </style>
 </head>
 <body>
+  <nav>
+    <a href="index.html">日常打卡</a>
+    <a href="weekly.html">每周统计</a>
+    <a href="cultivation.html">修仙体系</a>
+  </nav>
   <h1>Zeyu 的每日打卡 V2</h1>
   <button onclick="toggleDarkMode()">🌙 暗黑模式切换</button>
   <p id="quote" style="margin-top:10px; font-style: italic;"></p>
   <div id="taskList"></div>
   <p id="completionRate"></p>
   <button class="reset-btn" onclick="resetTasks()">重置所有任务</button>
-  <canvas id="weeklyChart" height="200"></canvas>
-
+  
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
     const tasks = [
@@ -75,6 +101,9 @@
       "21:00 – 游戏或电影放松",
       "21:30 – 给女友打电话"
     ];
+
+    // 各任务对应经验值，健身与科研论文给更多经验
+    const xpValues = [10, 20, 20, 10, 10, 10, 10];
 
     const quotes = [
       "凡心所向，素履以往，生如逆旅，一苇以航。",
@@ -120,76 +149,55 @@
       const percent = Math.round((doneCount / tasks.length) * 100);
       completionRateEl.textContent = `今日完成率：${percent}%`;
 
-      // 保存每日完成记录
+      // 保存每日完成记录（保留最近7天数据）
       const today = new Date().toISOString().slice(0, 10);
       let history = JSON.parse(localStorage.getItem("weekly_data") || "{}");
       history[today] = percent;
-      const sorted = Object.keys(history).sort().slice(-7); // 保留最近7天
+      const sortedDates = Object.keys(history).sort().slice(-7);
       const newHistory = {};
-      sorted.forEach(k => newHistory[k] = history[k]);
+      sortedDates.forEach(k => newHistory[k] = history[k]);
       localStorage.setItem("weekly_data", JSON.stringify(newHistory));
 
-      drawChart(newHistory);
+      // 更新今日获得的经验值
+      updateDailyExperience();
     }
 
+    // 根据任务完成情况计算当天经验值
+    function updateDailyExperience() {
+      const today = new Date().toISOString().slice(0, 10);
+      const xpKey = "daily_exp_" + today;
+      let xp = 0;
+      tasks.forEach((_, index) => {
+        if (localStorage.getItem("task_" + index) === "1") {
+          xp += xpValues[index];
+        }
+      });
+      localStorage.setItem(xpKey, xp);
+    }
+
+    // 重置所有任务
     function resetTasks() {
       tasks.forEach((_, index) => localStorage.setItem("task_" + index, "0"));
       loadTasks();
     }
 
-    function drawChart(data) {
-      const ctx = document.getElementById("weeklyChart").getContext("2d");
-      const labels = Object.keys(data);
-      const values = Object.values(data);
-      if (window.chartInstance) window.chartInstance.destroy();
-      
-      const gradient = ctx.createLinearGradient(0, 0, 0, 200);
-      gradient.addColorStop(0, "#42a5f5");
-      gradient.addColorStop(1, "#bbdefb");
-
-      window.chartInstance = new Chart(ctx, {
-    
-        type: 'line',
-        data: {
-          labels: labels,
-          datasets: [{
-            label: '打卡完成率（过去7天）',
-            backgroundColor: gradient,
-            borderColor: '#1e88e5',
-            pointBackgroundColor: '#ffffff',
-            pointBorderColor: '#1e88e5',
-            pointRadius: 5,
-            pointHoverRadius: 8,
-
-            label: '每日完成率',
-            data: values,
-            borderColor: '#42a5f5',
-            fill: false,
-            tension: 0.2
-          }]
-        },
-        options: {
-          responsive: true,
-          plugins: { legend: { display: false } },
-          scales: {
-            y: {
-              max: 100,
-              min: 0,
-              ticks: {
-                stepSize: 20,
-                callback: function(value) { return value + '%' }
-              },
-              title: { display: true, text: '完成率 (%)', color: '#888' }
-            },
-            x: {
-              title: { display: true, text: '日期', color: '#888' }
-            }
-          }
-        }
-      });
+    // 定时器：计算距离下一次零点的时间，到点后自动重置任务
+    function scheduleDailyReset() {
+      const now = new Date();
+      const nextMidnight = new Date();
+      nextMidnight.setHours(24, 0, 0, 0); // 设置至下一个零点
+      const msUntilMidnight = nextMidnight.getTime() - now.getTime();
+      setTimeout(() => {
+        resetTasks();
+        loadTasks();
+        // 递归调用，确保下一天继续自动重置
+        scheduleDailyReset();
+      }, msUntilMidnight);
     }
 
+    // 初始加载任务并启动每日自动重置计时器
     loadTasks();
+    scheduleDailyReset();
   </script>
 </body>
 </html>

@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <title>Zeyu 的修仙体系</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #f4f4f4, #e0e0e0);
+      margin: 30px;
+      color: #333;
+      transition: background-color 0.3s, color 0.3s;
+    }
+    .dark-mode {
+      background: #222;
+      color: #ddd;
+    }
+    nav {
+      margin-bottom: 20px;
+    }
+    nav a {
+      text-decoration: none;
+      padding: 10px 15px;
+      margin-right: 10px;
+      background: #42a5f5;
+      color: white;
+      border-radius: 4px;
+      transition: background 0.3s;
+    }
+    nav a:hover {
+      background: #1e88e5;
+    }
+    h1 {
+      margin-bottom: 20px;
+    }
+    .cultivation-panel {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      margin-bottom: 20px;
+    }
+    .progress-bar {
+      width: 100%;
+      background: #eee;
+      border-radius: 8px;
+      overflow: hidden;
+      margin-top: 10px;
+    }
+    .progress-inner {
+      height: 20px;
+      width: 0%;
+      background: linear-gradient(90deg, #42a5f5, #1e88e5);
+      text-align: center;
+      line-height: 20px;
+      color: white;
+      transition: width 0.5s ease-out;
+    }
+    .upgrade-effect {
+      position: fixed;
+      top: 20%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255,255,255,0.9);
+      padding: 20px 30px;
+      border-radius: 8px;
+      font-size: 1.2em;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      display: none;
+      z-index: 1000;
+    }
+    .blind-box {
+      background: #ffe082;
+      padding: 15px;
+      margin-top: 20px;
+      border-radius: 8px;
+      text-align: center;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    .blind-box:hover {
+      background: #ffd54f;
+    }
+    .hidden-message {
+      display: none;
+      margin-top: 15px;
+      padding: 10px;
+      background: #c5e1a5;
+      border-radius: 4px;
+    }
+    button {
+      padding: 6px 12px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      outline: none;
+    }
+    .toggle-btn {
+      background: #4caf50;
+      color: white;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="index.html">日常打卡</a>
+    <a href="weekly.html">每周统计</a>
+    <a href="cultivation.html">修仙体系</a>
+  </nav>
+  <h1>Zeyu 的修仙体系</h1>
+  <button class="toggle-btn" onclick="toggleDarkMode()">🌙 暗黑模式切换</button>
+  
+  <div class="cultivation-panel">
+    <div id="xpDisplay">当前经验：0 / 0</div>
+    <div id="levelDisplay">当前境界：未知</div>
+    <div class="progress-bar">
+      <div id="progressInner" class="progress-inner">0%</div>
+    </div>
+  </div>
+  
+  <!-- 最高境界时显示的盲盒 -->
+  <div id="blindBox" class="blind-box" style="display: none;">
+    🎁 打开盲盒，领取你的终极奥义
+  </div>
+  <div id="blindMessage" class="hidden-message">
+    天地玄黄，宇宙洪荒；修仙一途，至高无上！<br>
+    你已登仙成圣，切记世间万象皆如幻，唯心中那份执念永存！
+  </div>
+  
+  <!-- 升级特效 -->
+  <div id="upgradeEffect" class="upgrade-effect"></div>
+  
+  <script>
+    function toggleDarkMode() {
+      document.body.classList.toggle("dark-mode");
+    }
+    
+    // 定义 15 个境界及其经验门槛（单位：经验值）
+    const levels = [
+      { level: 1, name: "凡体初成", threshold: 0 },
+      { level: 2, name: "炼气期入门", threshold: 90 },
+      { level: 3, name: "聚灵境初探", threshold: 180 },
+      { level: 4, name: "筑基期初成", threshold: 270 },
+      { level: 5, name: "结丹期开基", threshold: 360 },
+      { level: 6, name: "元婴期初现", threshold: 450 },
+      { level: 7, name: "归虚境略显", threshold: 540 },
+      { level: 8, name: "灵魂合一", threshold: 630 },
+      { level: 9, name: "飞升前奏", threshold: 720 },
+      { level: 10, name: "天命通达", threshold: 810 },
+      { level: 11, name: "真仙再临", threshold: 900 },
+      { level: 12, name: "法则通晓", threshold: 990 },
+      { level: 13, name: "星河耀目", threshold: 1080 },
+      { level: 14, name: "万法归宗", threshold: 1170 },
+      { level: 15, name: "登仙成圣", threshold: 1260 }
+    ];
+    
+    // 计算累计经验：遍历 localStorage 所有以 "daily_exp_" 开头的键
+    function calculateCumulativeXP() {
+      let totalXP = 0;
+      for (let key in localStorage) {
+        if (key.indexOf("daily_exp_") === 0) {
+          totalXP += Number(localStorage.getItem(key));
+        }
+      }
+      return totalXP;
+    }
+    
+    // 根据累计经验计算当前境界和下一级所需经验
+    function getCultivationStatus(xp) {
+      let current = levels[0];
+      for (let lvl of levels) {
+        if (xp >= lvl.threshold) {
+          current = lvl;
+        }
+      }
+      // 获取下一级门槛（如果未达到最高境界）
+      let next = levels.find(lvl => lvl.threshold > xp);
+      return { current, next };
+    }
+    
+    // 显示升级特效（动画提示升级信息）
+    function showUpgradeEffect(message) {
+      const effectDiv = document.getElementById("upgradeEffect");
+      effectDiv.textContent = message;
+      effectDiv.style.display = "block";
+      setTimeout(() => {
+        effectDiv.style.display = "none";
+      }, 2000);
+    }
+    
+    // 刷新修仙状态信息
+    function updateCultivation() {
+      const xp = calculateCumulativeXP();
+      const status = getCultivationStatus(xp);
+      const xpDisplay = document.getElementById("xpDisplay");
+      const levelDisplay = document.getElementById("levelDisplay");
+      const progressInner = document.getElementById("progressInner");
+      
+      xpDisplay.textContent = `当前经验：${xp} / ${status.next ? status.next.threshold : xp}`;
+      levelDisplay.textContent = `当前境界：${status.current.name}（${status.current.level} 级）`;
+      
+      let progressPercent;
+      if (status.next) {
+        progressPercent = Math.floor(((xp - status.current.threshold) / (status.next.threshold - status.current.threshold)) * 100);
+      } else {
+        progressPercent = 100;
+      }
+      progressInner.style.width = progressPercent + '%';
+      progressInner.textContent = progressPercent + '%';
+      
+      // 检查是否已达最高境界
+      if (status.current.level === levels[levels.length - 1].level) {
+        document.getElementById("blindBox").style.display = "block";
+      }
+      
+      // 升级特效：若比上次记录的境界提升，则显示特效提示
+      let lastLevel = Number(localStorage.getItem("last_cultivation_level") || 0);
+      if (status.current.level > lastLevel) {
+        showUpgradeEffect(`恭喜！你已突破至【${status.current.name}】`);
+        localStorage.setItem("last_cultivation_level", status.current.level);
+      }
+    }
+    
+    // 绑定盲盒点击事件，展示最终奥义
+    document.getElementById("blindBox").onclick = function() {
+      const blindMsg = document.getElementById("blindMessage");
+      if (blindMsg.style.display === "none" || blindMsg.style.display === "") {
+        blindMsg.style.display = "block";
+      } else {
+        blindMsg.style.display = "none";
+      }
+    };
+    
+    updateCultivation();
+  </script>
+</body>
+</html>
