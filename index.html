@@ -1,23 +1,70 @@
 <!DOCTYPE html>
 <html lang="zh">
 <head>
-  <meta charset="UTF-8" />
-  <title>Zeyu 的打卡小站</title>
+  <meta charset="UTF-8">
+  <title>Zeyu 的打卡小站 V2</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body { font-family: sans-serif; margin: 30px; background: #f4f4f4; }
-    .task { background: white; padding: 12px; margin-bottom: 8px; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); display: flex; justify-content: space-between; }
-    .done { text-decoration: line-through; color: gray; }
-    button { padding: 6px 10px; border: none; border-radius: 4px; cursor: pointer; }
-    .reset-btn { background: #f44336; color: white; }
-    .tick-btn { background: #4caf50; color: white; }
+    body {
+      font-family: sans-serif;
+      background-color: #f4f4f4;
+      color: #333;
+      margin: 30px;
+      transition: all 0.3s;
+    }
+    .dark-mode {
+      background-color: #222;
+      color: #ddd;
+    }
+    .task {
+      background: white;
+      color: black;
+      padding: 12px;
+      margin-bottom: 10px;
+      border-radius: 8px;
+      display: flex;
+      justify-content: space-between;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    }
+    .dark-mode .task {
+      background: #444;
+      color: #ddd;
+    }
+    .done {
+      text-decoration: line-through;
+      color: gray;
+    }
+    button {
+      padding: 6px 10px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .tick-btn {
+      background: #4caf50;
+      color: white;
+    }
+    .reset-btn {
+      background: #f44336;
+      color: white;
+      margin-top: 10px;
+    }
+    canvas {
+      margin-top: 20px;
+      max-width: 100%;
+    }
   </style>
 </head>
 <body>
-  <h1>Zeyu 的每日打卡</h1>
+  <h1>Zeyu 的每日打卡 V2</h1>
+  <button onclick="toggleDarkMode()">🌙 暗黑模式切换</button>
+  <p id="quote" style="margin-top:10px; font-style: italic;"></p>
   <div id="taskList"></div>
   <p id="completionRate"></p>
   <button class="reset-btn" onclick="resetTasks()">重置所有任务</button>
+  <canvas id="weeklyChart" height="200"></canvas>
 
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
     const tasks = [
       "08:30 – 雅思口语练习",
@@ -29,18 +76,30 @@
       "21:30 – 给女友打电话"
     ];
 
-    const taskListEl = document.getElementById("taskList");
-    const completionRateEl = document.getElementById("completionRate");
+    const quotes = [
+      "凡心所向，素履以往，生如逆旅，一苇以航。",
+      "你可以一无所有，但绝不能一无是处。",
+      "此心光明，亦复何言。",
+      "不为模糊不清的未来担忧，只为清清楚楚的现在努力。",
+      "星光不问赶路人，时光不负有心人。"
+    ];
+
+    document.getElementById("quote").textContent = quotes[Math.floor(Math.random() * quotes.length)];
+
+    function toggleDarkMode() {
+      document.body.classList.toggle("dark-mode");
+    }
 
     function loadTasks() {
+      const taskListEl = document.getElementById("taskList");
+      const completionRateEl = document.getElementById("completionRate");
       taskListEl.innerHTML = "";
       let doneCount = 0;
       tasks.forEach((task, index) => {
         const done = localStorage.getItem("task_" + index) === "1";
         if (done) doneCount++;
         const taskEl = document.createElement("div");
-        taskEl.className = "task";
-        if (done) taskEl.classList.add("done");
+        taskEl.className = "task" + (done ? " done" : "");
 
         const span = document.createElement("span");
         span.textContent = task;
@@ -58,12 +117,76 @@
         taskListEl.appendChild(taskEl);
       });
 
-      completionRateEl.textContent = `今日完成率：${Math.round((doneCount / tasks.length) * 100)}%`;
+      const percent = Math.round((doneCount / tasks.length) * 100);
+      completionRateEl.textContent = `今日完成率：${percent}%`;
+
+      // 保存每日完成记录
+      const today = new Date().toISOString().slice(0, 10);
+      let history = JSON.parse(localStorage.getItem("weekly_data") || "{}");
+      history[today] = percent;
+      const sorted = Object.keys(history).sort().slice(-7); // 保留最近7天
+      const newHistory = {};
+      sorted.forEach(k => newHistory[k] = history[k]);
+      localStorage.setItem("weekly_data", JSON.stringify(newHistory));
+
+      drawChart(newHistory);
     }
 
     function resetTasks() {
       tasks.forEach((_, index) => localStorage.setItem("task_" + index, "0"));
       loadTasks();
+    }
+
+    function drawChart(data) {
+      const ctx = document.getElementById("weeklyChart").getContext("2d");
+      const labels = Object.keys(data);
+      const values = Object.values(data);
+      if (window.chartInstance) window.chartInstance.destroy();
+      
+      const gradient = ctx.createLinearGradient(0, 0, 0, 200);
+      gradient.addColorStop(0, "#42a5f5");
+      gradient.addColorStop(1, "#bbdefb");
+
+      window.chartInstance = new Chart(ctx, {
+    
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: '打卡完成率（过去7天）',
+            backgroundColor: gradient,
+            borderColor: '#1e88e5',
+            pointBackgroundColor: '#ffffff',
+            pointBorderColor: '#1e88e5',
+            pointRadius: 5,
+            pointHoverRadius: 8,
+
+            label: '每日完成率',
+            data: values,
+            borderColor: '#42a5f5',
+            fill: false,
+            tension: 0.2
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: {
+              max: 100,
+              min: 0,
+              ticks: {
+                stepSize: 20,
+                callback: function(value) { return value + '%' }
+              },
+              title: { display: true, text: '完成率 (%)', color: '#888' }
+            },
+            x: {
+              title: { display: true, text: '日期', color: '#888' }
+            }
+          }
+        }
+      });
     }
 
     loadTasks();
