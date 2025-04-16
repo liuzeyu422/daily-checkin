@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <title>Zeyu 的打卡小站</title>
+  <style>
+    body { font-family: sans-serif; margin: 30px; background: #f4f4f4; }
+    .task { background: white; padding: 12px; margin-bottom: 8px; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); display: flex; justify-content: space-between; }
+    .done { text-decoration: line-through; color: gray; }
+    button { padding: 6px 10px; border: none; border-radius: 4px; cursor: pointer; }
+    .reset-btn { background: #f44336; color: white; }
+    .tick-btn { background: #4caf50; color: white; }
+  </style>
+</head>
+<body>
+  <h1>Zeyu 的每日打卡</h1>
+  <div id="taskList"></div>
+  <p id="completionRate"></p>
+  <button class="reset-btn" onclick="resetTasks()">重置所有任务</button>
+
+  <script>
+    const tasks = [
+      "08:30 – 雅思口语练习",
+      "10:00 – 健身训练",
+      "13:30 – 阅读科研论文",
+      "16:00 – 整理科研笔记",
+      "20:00 – 小说构思/写作",
+      "21:00 – 游戏或电影放松",
+      "21:30 – 给女友打电话"
+    ];
+
+    const taskListEl = document.getElementById("taskList");
+    const completionRateEl = document.getElementById("completionRate");
+
+    function loadTasks() {
+      taskListEl.innerHTML = "";
+      let doneCount = 0;
+      tasks.forEach((task, index) => {
+        const done = localStorage.getItem("task_" + index) === "1";
+        if (done) doneCount++;
+        const taskEl = document.createElement("div");
+        taskEl.className = "task";
+        if (done) taskEl.classList.add("done");
+
+        const span = document.createElement("span");
+        span.textContent = task;
+
+        const btn = document.createElement("button");
+        btn.textContent = done ? "已完成" : "打卡";
+        btn.className = "tick-btn";
+        btn.onclick = () => {
+          localStorage.setItem("task_" + index, done ? "0" : "1");
+          loadTasks();
+        };
+
+        taskEl.appendChild(span);
+        taskEl.appendChild(btn);
+        taskListEl.appendChild(taskEl);
+      });
+
+      completionRateEl.textContent = `今日完成率：${Math.round((doneCount / tasks.length) * 100)}%`;
+    }
+
+    function resetTasks() {
+      tasks.forEach((_, index) => localStorage.setItem("task_" + index, "0"));
+      loadTasks();
+    }
+
+    loadTasks();
+  </script>
+</body>
+</html>
